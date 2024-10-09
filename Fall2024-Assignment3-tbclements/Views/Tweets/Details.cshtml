@@ -1,0 +1,36 @@
+﻿@model Fall2024_Assignment3_tbclements.Models.Tweet
+
+@{
+    ViewData["Title"] = "Details";
+}
+
+<h1>Details</h1>
+
+<div>
+    <h4>Tweet</h4>
+    <hr />
+    <dl class="row">
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.Actor)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.Actor.Name)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.TweetText)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.TweetText)
+        </dd>
+        <dt class = "col-sm-2">
+            @Html.DisplayNameFor(model => model.TweetSentiment)
+        </dt>
+        <dd class = "col-sm-10">
+            @Html.DisplayFor(model => model.TweetSentiment)
+        </dd>
+    </dl>
+</div>
+<div>
+    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
+    <a asp-action="Index">Back to List</a>
+</div>

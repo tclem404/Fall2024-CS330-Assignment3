@@ -1,8 +1,8 @@
-using Fall2024_Assignment3_tbclements.Models;
 using Microsoft.AspNetCore.Mvc;
+using Fall2024_Assignment3_tbclements.Models;
 using System.Diagnostics;
 
-namespace Fall2024_Assignment3_tbclements.Controllers
+namespace MVC_Test.Controllers
 {
     public class HomeController : Controller
     {
