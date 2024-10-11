@@ -16,6 +16,9 @@
                 @Html.DisplayNameFor(model => model.Actor)
             </th>
             <th>
+                @Html.DisplayNameFor(model => model.Username)
+            </th>
+            <th>
                 @Html.DisplayNameFor(model => model.TweetText)
             </th>
             <th>
@@ -29,6 +32,9 @@
         <tr>
             <td>
                 @Html.DisplayFor(modelItem => item.Actor.Name)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Username)
             </td>
             <td>
                 @Html.DisplayFor(modelItem => item.TweetText)

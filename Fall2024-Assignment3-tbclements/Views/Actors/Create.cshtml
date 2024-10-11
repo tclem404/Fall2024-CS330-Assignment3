@@ -1,4 +1,4 @@
-﻿@model Fall2024_Assignment3_tbclements.Models.Actor
+﻿@model Fall2024_Assignment3_tbclements.Models.ActorCreateViewModel
 
 @{
     ViewData["Title"] = "Create";
@@ -13,30 +13,45 @@
         <form asp-action="Create" enctype="multipart/form-data">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <div class="form-group">
-                <label asp-for="Name" class="control-label"></label>
-                <input asp-for="Name" class="form-control" />
-                <span asp-validation-for="Name" class="text-danger"></span>
+                <label asp-for="Actor.Name" class="control-label"></label>
+                <input asp-for="Actor.Name" class="form-control" />
+                <span asp-validation-for="Actor.Name" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Gender" class="control-label"></label>
-                <input asp-for="Gender" class="form-control" />
-                <span asp-validation-for="Gender" class="text-danger"></span>
+                <label asp-for="Actor.Gender" class="control-label"></label>
+                <input asp-for="Actor.Gender" class="form-control" />
+                <span asp-validation-for="Actor.Gender" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="Age" class="control-label"></label>
-                <input asp-for="Age" class="form-control" />
-                <span asp-validation-for="Age" class="text-danger"></span>
+                <label asp-for="Actor.Age" class="control-label"></label>
+                <input asp-for="Actor.Age" class="form-control" />
+                <span asp-validation-for="Actor.Age" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="IMDBLink" class="control-label"></label>
-                <input asp-for="IMDBLink" class="form-control" />
-                <span asp-validation-for="IMDBLink" class="text-danger"></span>
+                <label asp-for="Actor.IMDBLink" class="control-label"></label>
+                <input asp-for="Actor.IMDBLink" class="form-control" />
+                <span asp-validation-for="Actor.IMDBLink" class="text-danger"></span>
             </div>
             <div class="form-group">
                 <label asp-for="Poster" class="control-label"></label>
                 <input asp-for="Poster" type="file" class="form-control" />
                 <span asp-validation-for="Poster" class="text-danger"></span>
             </div>
+
+            <div class="form-group">
+                <label asp-for="Multi.Members" class="control-label"></label>
+                <input asp-for="Multi.Members" type="hidden" id="selectedmemebers" value="@Model.Multi.SelectedMovies" />
+                @Html.DropDownListFor(x => x.Multi.Members, Model.Multi.MovieList, new
+                    {
+                        @id = "Members",
+                        @class = "select2 form-select",
+                        multiple =
+                         "multiple",
+                        tabindex = "3"
+                    })
+                <span asp-validation-for="Multi.Members" class="text-danger"></span>
+            </div>
+
             <div class="form-group">
                 <input type="submit" value="Create" class="btn btn-primary" />
             </div>

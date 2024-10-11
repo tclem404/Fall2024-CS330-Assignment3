@@ -16,6 +16,8 @@ public class Tweet
     [Required]
     public string? TweetText { get; set; }
 
+    public string? Username { get; set; }
+
     [Required]
     public double TweetSentiment { get; set; }
 }

@@ -50,10 +50,6 @@
     </dl>
 </div>
 
-<h5>
-    @Html.DisplayNameFor(model => model.avgSentiment) : @Html.DisplayFor(model => model.avgSentiment)    
-</h5>
-
 <table class="table">
     <thead>
         <tr>
@@ -75,9 +71,16 @@
     </tbody>
 </table>
 
+<h5>
+    @Html.DisplayNameFor(model => model.avgSentiment) : @Html.DisplayFor(model => model.avgSentiment)
+</h5>
+
 <table class="table">
     <thead>
         <tr>
+            <th>
+                Username
+            </th>
             <th>
                 @Html.DisplayNameFor(model => model.Tweets)
             </th>
@@ -91,6 +94,9 @@
         @foreach (var item in Model.Tweets)
         {
             <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Username)
+                </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.TweetText)
                 </td>

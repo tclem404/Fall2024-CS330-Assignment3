@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using Fall2024_Assignment3_tbclements.Data;
 using Fall2024_Assignment3_tbclements.Models;
 using System.Numerics;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Fall2024_Assignment3_tbclements.Controllers
 {
@@ -87,8 +89,17 @@ namespace Fall2024_Assignment3_tbclements.Controllers
         // GET: Movies/Create
         public IActionResult Create()
         {
-            ViewData["ActorId"] = new SelectList(_context.Actor, "Id", "Name");
-            return View();
+            var selList = new SelectList(_context.Actor, "Id", "Name");
+            var MAS = new MultiActorSelection()
+            {
+                ActorList = selList
+            };
+
+            var vm = new MovieCreateViewModel()
+            {
+                Multi = MAS
+            };
+            return View(vm);
         }
 
         // POST: Movies/Create
@@ -96,21 +107,50 @@ namespace Fall2024_Assignment3_tbclements.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Title,IMDBLink,Genre,YearOfRelease")] Movie movie, IFormFile? Poster)
+        public async Task<IActionResult> Create([Bind("Id,Title,IMDBLink,Genre,YearOfRelease")] Movie movie, IFormFile? Poster, [Bind("Members")] MultiActorSelection Multi)
         {
+            if (Poster is not null && Poster.Length > 0)
+            {
+                using var stream = new MemoryStream(); // using calls dispose at end of context
+                Poster.CopyTo(stream);
+                movie.Poster = stream.ToArray();
+            }
+
+            // Just override, don't worry
+            ModelState.GetValueOrDefault("Multi.Members").ValidationState = ModelValidationState.Valid;
+
             if (ModelState.IsValid)
             {
-                if (Poster is not null && Poster.Length > 0)
-                {
-                    using var stream = new MemoryStream(); // using calls dispose at end of context
-                    Poster.CopyTo(stream);
-                    movie.Poster = stream.ToArray();
-                }
                 _context.Add(movie);
+                await _context.SaveChangesAsync();
+
+                foreach (int item in Multi.Members)
+                { 
+                    MovieActor ma = new MovieActor()
+                    {
+                        MovieId = movie.Id,
+                        ActorId = item
+                    };
+
+                    _context.Add(ma);
+                }
+
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            return View(movie);
+
+            var selList = new SelectList(_context.Actor, "Id", "Name");
+            var vm = new MovieCreateViewModel()
+            {
+                Movie = movie,
+                Multi = new MultiActorSelection()
+                {
+                    ActorList = selList,
+                    Members = Multi.Members
+                }
+            };
+
+            return View(vm);
         }
 
         // GET: Movies/Edit/5
@@ -126,7 +166,26 @@ namespace Fall2024_Assignment3_tbclements.Controllers
             {
                 return NotFound();
             }
-            return View(movie);
+
+            var listActors = await _context.MovieActor
+                .Where(ma => ma.MovieId == movie.Id)
+                .Select(ma => ma.ActorId)
+                .ToListAsync();
+
+
+
+            var vm = new MovieCreateViewModel()
+            {
+                Movie = movie,
+                Poster = movie.Poster,
+                Multi = new MultiActorSelection()
+                {
+                    ActorList = new SelectList(_context.Actor, "Id", "Name"),
+                    Members = listActors.ToArray()
+                }
+            };
+
+            return View(vm);
         }
 
         // POST: Movies/Edit/5
@@ -134,12 +193,15 @@ namespace Fall2024_Assignment3_tbclements.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,IMDBLink,Genre,YearOfRelease")] Movie movie, IFormFile Poster)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,IMDBLink,Genre,YearOfRelease")] Movie movie, IFormFile Poster, [Bind("Members")] MultiActorSelection Multi)
         {
             if (id != movie.Id)
             {
                 return NotFound();
             }
+
+            // Just override, don't worry
+            ModelState.GetValueOrDefault("Multi.Members").ValidationState = ModelValidationState.Valid;
 
             if (ModelState.IsValid)
             {
@@ -151,6 +213,24 @@ namespace Fall2024_Assignment3_tbclements.Controllers
                         Poster.CopyTo(stream);
                         movie.Poster = stream.ToArray();
                     }
+
+                    var allMovieActorPairs = await _context.MovieActor.Where(ma => ma.MovieId == movie.Id).ToListAsync();
+                    _context.MovieActor.RemoveRange(allMovieActorPairs);
+                    await _context.SaveChangesAsync();
+
+                    foreach (int item in Multi.Members)
+                    {
+                        MovieActor ma = new MovieActor()
+                        {
+                            MovieId = movie.Id,
+                            ActorId = item
+                        };
+
+                        _context.Add(ma);
+                    }
+                    await _context.SaveChangesAsync();
+
+
                     _context.Update(movie);
                     await _context.SaveChangesAsync();
                 }
@@ -167,7 +247,18 @@ namespace Fall2024_Assignment3_tbclements.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            return View(movie);
+            var selList = new SelectList(_context.Actor, "Id", "Name");
+            var vm = new MovieCreateViewModel()
+            {
+                Movie = movie,
+                Multi = new MultiActorSelection()
+                {
+                    ActorList = selList,
+                    Members = Multi.Members
+                }
+            };
+
+            return View(vm);
         }
 
         // GET: Movies/Delete/5
@@ -198,6 +289,18 @@ namespace Fall2024_Assignment3_tbclements.Controllers
             {
                 _context.Movie.Remove(movie);
             }
+
+            var actorsIn = await _context.MovieActor
+                .Where(ma => ma.MovieId == id)
+                .ToListAsync();
+
+            _context.RemoveRange(actorsIn);
+
+            var reviewsAbout = await _context.Review
+                .Where(r => r.MovieId == id)
+                .ToListAsync();
+
+            _context.RemoveRange(reviewsAbout);
 
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));

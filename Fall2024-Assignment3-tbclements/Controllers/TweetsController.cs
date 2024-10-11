@@ -57,7 +57,7 @@ namespace Fall2024_Assignment3_tbclements.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,ActorId,TweetText,TweetSentiment")] Tweet tweet)
+        public async Task<IActionResult> Create([Bind("Id,ActorId,Username,TweetText,TweetSentiment")] Tweet tweet)
         {
             if (ModelState.IsValid)
             {
@@ -91,7 +91,7 @@ namespace Fall2024_Assignment3_tbclements.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,ActorId,TweetText,TweetSentiment")] Tweet tweet)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,ActorId,Username,TweetText,TweetSentiment")] Tweet tweet)
         {
             if (id != tweet.Id)
             {

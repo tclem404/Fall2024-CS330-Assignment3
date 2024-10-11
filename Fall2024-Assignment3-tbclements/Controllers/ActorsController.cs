@@ -7,16 +7,22 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Fall2024_Assignment3_tbclements.Data;
 using Fall2024_Assignment3_tbclements.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using OpenAI.Chat;
+using System.ClientModel;
+using Azure.AI.OpenAI;
 
 namespace Fall2024_Assignment3_tbclements.Controllers
 {
     public class ActorsController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
 
-        public ActorsController(ApplicationDbContext context)
+        public ActorsController(ApplicationDbContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration;
         }
 
         // GET: Actors
@@ -88,29 +94,85 @@ namespace Fall2024_Assignment3_tbclements.Controllers
         // GET: Actors/Create
         public IActionResult Create()
         {
-            return View();
+            var selList = new SelectList(_context.Movie, "Id", "Title");
+            var MAS = new MultiMovieSelection()
+            {
+                MovieList = selList
+            };
+
+            var vm = new ActorCreateViewModel()
+            {
+                Multi = MAS
+            };
+            return View(vm);
         }
+
+        private async void generateTweets(Actor actor) {
+
+            ApiKeyCredential ApiCredential = new(_configuration.GetValue(typeof(string), "OpenAIKey") as string);
+
+            string AiDeployment = "gpt-35-turbo";
+            ChatClient client = new AzureOpenAIClient(new Uri(_configuration.GetValue(typeof(string), "OpenAIEndpoint") as string), ApiCredential).GetChatClient(AiDeployment);
+
+            ChatCompletion completion = await client.CompleteChatAsync("Say 'this is a test.'");
+
+            Console.WriteLine($"[ASSISTANT]: {completion.Content[0].Text}");
+        }
+
 
         // POST: Actors/Create
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name,Gender,Age,IMDBLink")] Actor actor, IFormFile? Poster)
+        public async Task<IActionResult> Create([Bind("Id,Name,Gender,Age,IMDBLink")] Actor actor, IFormFile? Poster, [Bind("Members")] MultiMovieSelection Multi)
         {
+            if (Poster is not null && Poster.Length > 0)
+            {
+                using var stream = new MemoryStream(); // using calls dispose at end of context
+                Poster.CopyTo(stream);
+                actor.Poster = stream.ToArray();
+            }
+
+            // Just override, don't worry
+            ModelState.GetValueOrDefault("Multi.Members").ValidationState = ModelValidationState.Valid;
+
             if (ModelState.IsValid)
             {
-                if (Poster is not null && Poster.Length > 0)
-                {
-                    using var stream = new MemoryStream(); // using calls dispose at end of context
-                    Poster.CopyTo(stream);
-                    actor.Poster = stream.ToArray();
-                }
+                
                 _context.Add(actor);
                 await _context.SaveChangesAsync();
+
+                foreach (int item in Multi.Members)
+                {
+                    MovieActor ma = new MovieActor()
+                    {
+                        ActorId = actor.Id,
+                        MovieId = item
+                    };
+
+                    _context.Add(ma);
+                }
+
+                await _context.SaveChangesAsync();
+
+                generateTweets(actor);
+
                 return RedirectToAction(nameof(Index));
             }
-            return View(actor);
+
+            var selList = new SelectList(_context.Movie, "Id", "Title");
+            var vm = new ActorCreateViewModel()
+            {
+                Actor = actor,
+                Multi = new MultiMovieSelection()
+                {
+                    MovieList = selList,
+                    Members = Multi.Members
+                }
+            };
+
+            return View(vm);
         }
 
         // GET: Actors/Edit/5
@@ -126,7 +188,26 @@ namespace Fall2024_Assignment3_tbclements.Controllers
             {
                 return NotFound();
             }
-            return View(actor);
+
+            var listMovies = await _context.MovieActor
+                .Where(ma => ma.ActorId == actor.Id)
+                .Select(ma => ma.MovieId)
+                .ToListAsync();
+
+
+
+            var vm = new ActorCreateViewModel()
+            {
+                Actor = actor,
+                Poster = actor.Poster,
+                Multi = new MultiMovieSelection()
+                {
+                    MovieList = new SelectList(_context.Movie, "Id", "Title"),
+                    Members = listMovies.ToArray()
+                }
+            };
+
+            return View(vm);
         }
 
         // POST: Actors/Edit/5
@@ -134,12 +215,15 @@ namespace Fall2024_Assignment3_tbclements.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Gender,Age,IMDBLink")] Actor actor, IFormFile Poster)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Gender,Age,IMDBLink")] Actor actor, IFormFile Poster, [Bind("Members")] MultiActorSelection Multi)
         {
             if (id != actor.Id)
             {
                 return NotFound();
             }
+
+            // Just override, don't worry
+            ModelState.GetValueOrDefault("Multi.Members").ValidationState = ModelValidationState.Valid;
 
             if (ModelState.IsValid)
             {
@@ -151,6 +235,23 @@ namespace Fall2024_Assignment3_tbclements.Controllers
                         Poster.CopyTo(stream);
                         actor.Poster = stream.ToArray();
                     }
+
+                    var allMovieActorPairs = await _context.MovieActor.Where(ma => ma.ActorId == actor.Id).ToListAsync();
+                    _context.MovieActor.RemoveRange(allMovieActorPairs);
+                    await _context.SaveChangesAsync();
+
+                    foreach (int item in Multi.Members)
+                    {
+                        MovieActor ma = new MovieActor()
+                        {
+                            ActorId = actor.Id,
+                            MovieId = item
+                        };
+
+                        _context.Add(ma);
+                    }
+                    await _context.SaveChangesAsync();
+
                     _context.Update(actor);
                     await _context.SaveChangesAsync();
                 }
@@ -167,7 +268,26 @@ namespace Fall2024_Assignment3_tbclements.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            return View(actor);
+
+            var listMovies = await _context.MovieActor
+                .Where(ma => ma.ActorId == actor.Id)
+                .Select(ma => ma.MovieId)
+                .ToListAsync();
+
+
+
+            var vm = new ActorCreateViewModel()
+            {
+                Actor = actor,
+                Poster = actor.Poster,
+                Multi = new MultiMovieSelection()
+                {
+                    MovieList = new SelectList(_context.Movie, "Id", "Title"),
+                    Members = listMovies.ToArray()
+                }
+            };
+
+            return View(vm);
         }
 
         // GET: Actors/Delete/5
@@ -198,6 +318,18 @@ namespace Fall2024_Assignment3_tbclements.Controllers
             {
                 _context.Actor.Remove(actor);
             }
+
+            var tweets = await _context.Tweet
+                .Where(t => t.ActorId == id)
+                .ToListAsync();
+
+            _context.RemoveRange(tweets);
+
+            var moviesIn = await _context.MovieActor
+                .Where(ma => ma.ActorId == id)
+                .ToListAsync();
+
+            _context.RemoveRange(moviesIn);
 
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
