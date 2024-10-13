@@ -16,6 +16,10 @@ public class Review
     [Required]
     public string? ReviewText { get; set; }
 
+    public string? Reviewer {  get; set; }
+
+    public string? Publication { get; set; }
+
     [Required]
     public double ReviewSentiment { get; set; }
 }

@@ -10,16 +10,24 @@ using Fall2024_Assignment3_tbclements.Models;
 using System.Numerics;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Azure.AI.OpenAI;
+using OpenAI.Chat;
+using System.ClientModel;
+using System.Text.Json.Nodes;
+using VaderSharp2;
+using System.Configuration;
 
 namespace Fall2024_Assignment3_tbclements.Controllers
 {
     public class MoviesController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
 
-        public MoviesController(ApplicationDbContext context)
+        public MoviesController(ApplicationDbContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration;
         }
 
         // GET: Movies
@@ -102,6 +110,66 @@ namespace Fall2024_Assignment3_tbclements.Controllers
             return View(vm);
         }
 
+        private async Task generateReviews(Movie movie)
+        {
+
+            bool smallEnough = true;
+            do
+            {
+                ApiKeyCredential ApiCredential = new(_configuration.GetValue(typeof(string), "OpenAIKey") as string);
+
+                string AiDeployment = "gpt-35-turbo";
+                ChatClient client = new AzureOpenAIClient(new Uri(_configuration.GetValue(typeof(string), "OpenAIEndpoint") as string), ApiCredential).GetChatClient(AiDeployment);
+
+                var messages = new ChatMessage[]
+                {
+                new SystemChatMessage($"You represent the Film Critics Association. Generate an answer with a valid JSON formatted array of objects containing the reviewer, publication, and quote. The response should start with [."),
+                new UserChatMessage($"Generate 10 reviews from a variety of reviewers about the movie {movie.Title}.")
+                };
+                ClientResult<ChatCompletion> result = await client.CompleteChatAsync(messages);
+
+                string responseStr = result.Value.Content.FirstOrDefault()?.Text;
+
+                string tweetsJsonString = responseStr.Substring(responseStr.IndexOf('['), responseStr.LastIndexOf(']') + 1 - responseStr.IndexOf('[')) ?? "[]";
+                Console.WriteLine(tweetsJsonString);
+
+                JsonArray json = null;
+                try
+                {
+                    json = JsonNode.Parse(tweetsJsonString)!.AsArray();
+                }
+                catch
+                {
+                    continue;
+                }
+
+                var analyzer = new SentimentIntensityAnalyzer();
+
+                var reviews = json.Select(t => new { Quote = t!["quote"]?.ToString() ?? "", Publication = t!["publication"]?.ToString() ?? "" , Reviewer = t!["reviewer"]?.ToString() ?? "" }).ToArray();
+                smallEnough = reviews.Length < 10;
+
+                if (!smallEnough)
+                {
+                    foreach (var review in reviews)
+                    {
+                        SentimentAnalysisResults sentiment = analyzer.PolarityScores(review.Quote);
+
+                        Review t = new Review()
+                        {
+                            MovieId = movie.Id,
+                            ReviewText = review.Quote,
+                            Reviewer = review.Reviewer,
+                            Publication = review.Publication,
+                            ReviewSentiment = sentiment.Compound
+                        };
+
+                        _context.Add(t);
+                        _context.SaveChanges();
+                    }
+                }
+            } while (smallEnough);
+        }
+
         // POST: Movies/Create
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
@@ -136,6 +204,9 @@ namespace Fall2024_Assignment3_tbclements.Controllers
                 }
 
                 await _context.SaveChangesAsync();
+
+                generateReviews(movie);
+
                 return RedirectToAction(nameof(Index));
             }
 

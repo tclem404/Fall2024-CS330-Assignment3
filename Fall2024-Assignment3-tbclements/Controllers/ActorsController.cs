@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using OpenAI.Chat;
 using System.ClientModel;
 using Azure.AI.OpenAI;
+using System.Text.Json.Nodes;
+using VaderSharp2;
 
 namespace Fall2024_Assignment3_tbclements.Controllers
 {
@@ -107,16 +109,60 @@ namespace Fall2024_Assignment3_tbclements.Controllers
             return View(vm);
         }
 
-        private async void generateTweets(Actor actor) {
+        private async Task generateTweets(Actor actor) {
 
-            ApiKeyCredential ApiCredential = new(_configuration.GetValue(typeof(string), "OpenAIKey") as string);
+            bool smallEnough = true;
+            do
+            {
+                ApiKeyCredential ApiCredential = new(_configuration.GetValue(typeof(string), "OpenAIKey") as string);
 
-            string AiDeployment = "gpt-35-turbo";
-            ChatClient client = new AzureOpenAIClient(new Uri(_configuration.GetValue(typeof(string), "OpenAIEndpoint") as string), ApiCredential).GetChatClient(AiDeployment);
+                string AiDeployment = "gpt-35-turbo";
+                ChatClient client = new AzureOpenAIClient(new Uri(_configuration.GetValue(typeof(string), "OpenAIEndpoint") as string), ApiCredential).GetChatClient(AiDeployment);
 
-            ChatCompletion completion = await client.CompleteChatAsync("Say 'this is a test.'");
+                var messages = new ChatMessage[]
+                {
+                new SystemChatMessage($"You represent the Twitter social media platform. Generate an answer with a valid JSON formatted array of objects containing the tweet and username. The response should start with [."),
+                new UserChatMessage($"Generate 20 tweets from a variety of users about the actor {actor.Name}.")
+                };
+                ClientResult<ChatCompletion> result = await client.CompleteChatAsync(messages);
 
-            Console.WriteLine($"[ASSISTANT]: {completion.Content[0].Text}");
+                string responseStr = result.Value.Content.FirstOrDefault()?.Text;
+
+                string tweetsJsonString = responseStr.Substring(responseStr.IndexOf('['), responseStr.LastIndexOf(']') + 1 - responseStr.IndexOf('[')) ?? "[]";
+                Console.WriteLine(tweetsJsonString);
+
+                JsonArray json = null;
+                try
+                {
+                    json = JsonNode.Parse(tweetsJsonString)!.AsArray();
+                }
+                catch {
+                    continue;
+                }
+
+                var analyzer = new SentimentIntensityAnalyzer();
+
+                var tweets = json.Select(t => new { Username = t!["username"]?.ToString() ?? "", Text = t!["tweet"]?.ToString() ?? "" }).ToArray();
+                smallEnough = tweets.Length < 20;
+
+                if(!smallEnough)
+                {
+                    foreach (var tweet in tweets)
+                    {
+                        SentimentAnalysisResults sentiment = analyzer.PolarityScores(tweet.Text);
+
+                        Tweet t = new Tweet() {
+                            ActorId = actor.Id,
+                            Username = tweet.Username,
+                            TweetText = tweet.Text,
+                            TweetSentiment = sentiment.Compound
+                        };
+
+                        _context.Add(t);
+                        _context.SaveChanges();
+                    }
+                }
+            } while (smallEnough);
         }
 
 
@@ -154,9 +200,9 @@ namespace Fall2024_Assignment3_tbclements.Controllers
                     _context.Add(ma);
                 }
 
-                await _context.SaveChangesAsync();
-
                 generateTweets(actor);
+
+                await _context.SaveChangesAsync();
 
                 return RedirectToAction(nameof(Index));
             }

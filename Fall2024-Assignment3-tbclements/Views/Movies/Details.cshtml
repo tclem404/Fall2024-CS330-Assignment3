@@ -83,6 +83,12 @@
                 @Html.DisplayNameFor(model => model.Reviews)
             </th>
             <th>
+                Reviewer
+            </th>
+            <th>
+                Publication
+            </th>
+            <th>
                 Sentiment
             </th>
             <th></th>
@@ -94,6 +100,12 @@
             <tr>
                 <td>
                     @Html.DisplayFor(modelItem => item.ReviewText)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Reviewer)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Publication)
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.ReviewSentiment)

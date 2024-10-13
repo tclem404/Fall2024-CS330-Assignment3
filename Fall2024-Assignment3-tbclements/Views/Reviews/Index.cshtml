@@ -19,6 +19,12 @@
                 @Html.DisplayNameFor(model => model.ReviewText)
             </th>
             <th>
+                @Html.DisplayNameFor(model => model.Reviewer)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Publication)
+            </th>
+            <th>
                 @Html.DisplayNameFor(model => model.ReviewSentiment)
             </th>
             <th></th>
@@ -32,6 +38,12 @@
             </td>
             <td>
                 @Html.DisplayFor(modelItem => item.ReviewText)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Reviewer)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Publication)
             </td>
             <td>
                 @Html.DisplayFor(modelItem => item.ReviewSentiment)
