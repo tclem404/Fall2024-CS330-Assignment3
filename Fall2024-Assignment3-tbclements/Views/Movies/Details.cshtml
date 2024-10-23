@@ -4,117 +4,109 @@
     ViewData["Title"] = "Details";
 }
 
-<h1>Details</h1>
+<h1>@Html.DisplayFor(model => model.Movie.Title)</h1>
 
-<div>
-    <h4>Movie</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Movie.Title)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Movie.Title)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Movie.IMDBLink)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Movie.IMDBLink)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Movie.Genre)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Movie.Genre)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Movie.YearOfRelease)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Movie.YearOfRelease)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Movie.Poster)
-        </dt>
-        <dd class="col-sm-10">
+<div class="flex">
+    <div>
+        <div class="photoInfo">
             @if (Model.Movie.Poster != null)
             {
 
                 // alternative way
 
-                <img width="100" height="100" src="@Url.Action("GetMoviePoster", "Movies", new {Model.Movie.Id})" style="border-radius:50%" />
+                <img src="@Url.Action("GetMoviePoster", "Movies", new {Model.Movie.Id})" />
             }
-        </dd>
-    </dl>
+
+            <dl class="deets col">
+                <dt class="col-sm-2">
+                    @Html.DisplayNameFor(model => model.Movie.Genre)
+                </dt>
+                <dd class="col-sm-10">
+                    @Html.DisplayFor(model => model.Movie.Genre)
+                </dd>
+                <dt class="col-sm-2">
+                    @Html.DisplayNameFor(model => model.Movie.YearOfRelease)
+                </dt>
+                <dd class="col-sm-10">
+                    @Html.DisplayFor(model => model.Movie.YearOfRelease)
+                </dd>
+                <dt class = "col-sm-2">
+                    @Html.DisplayNameFor(model => model.Movie.IMDBLink)
+                </dt>
+                <dd class = "col-sm-10">
+                    <a href="@Html.DisplayFor(model => model.Movie.IMDBLink)">Link</a>
+                </dd>
+            </dl>
+        </div>
+
+        <table class="dt movs">
+            <thead>
+                <tr>
+                    <th>
+                        @Html.DisplayNameFor(model => model.Actors)
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Actors)
+                {
+                    <tr>
+                        <td>
+                            <a asp-controller="Actors" asp-action="Details" asp-route-id="@item.Id">@Html.DisplayFor(modelItem => item.Name)</a>
+
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+        </table>
+    </div>
+
+    <div class="tweets">
+        <h5>
+            @Html.DisplayNameFor(model => model.AverageSentiment) : @Html.DisplayFor(model => model.AverageSentiment)
+        </h5>
+
+        <table class="dt">
+            <thead>
+                <tr>
+                    <th>
+                        @Html.DisplayNameFor(model => model.Reviews)
+                    </th>
+                    <th>
+                        Reviewer
+                    </th>
+                    <th>
+                        Publication
+                    </th>
+                    <th>
+                        Sentiment
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Reviews)
+                {
+                    <tr>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.ReviewText)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Reviewer)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Publication)
+                        </td>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.ReviewSentiment)
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+        </table>
+    </div>
 </div>
-
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Actors)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model.Actors)
-        {
-            <tr>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Name)
-                </td>
-            </tr>
-        }
-
-    </tbody>
-</table>
-
-
-<h5>
-    @Html.DisplayNameFor(model => model.AverageSentiment) : @Html.DisplayFor(model => model.AverageSentiment)
-</h5>
-
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Reviews)
-            </th>
-            <th>
-                Reviewer
-            </th>
-            <th>
-                Publication
-            </th>
-            <th>
-                Sentiment
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model.Reviews)
-        {
-            <tr>
-                <td>
-                    @Html.DisplayFor(modelItem => item.ReviewText)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Reviewer)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Publication)
-                </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.ReviewSentiment)
-                </td>
-            </tr>
-        }
-
-    </tbody>
-</table>
 
 <div>
     <a asp-action="Edit" asp-route-id="@Model?.Movie.Id">Edit</a> |

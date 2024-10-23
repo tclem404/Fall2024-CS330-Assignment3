@@ -9,14 +9,12 @@
 <p>
     <a asp-action="Create">Create New</a>
 </p>
-<table class="table">
+<table class="indDT">
     <thead>
         <tr>
+            <th></th>
             <th>
                 @Html.DisplayNameFor(model => model.Title)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.IMDBLink)
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Genre)
@@ -30,11 +28,17 @@
     <tbody>
 @foreach (var item in Model) {
         <tr>
+                <td>
+                    @if (item.Poster != null)
+                    {
+
+                        // alternative way
+
+                        <img class="pfp" src="@Url.Action("GetMoviePoster", "Movies", new {item.Id})" />
+                    }
+                </td>
             <td>
                 @Html.DisplayFor(modelItem => item.Title)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.IMDBLink)
             </td>
             <td>
                 @Html.DisplayFor(modelItem => item.Genre)

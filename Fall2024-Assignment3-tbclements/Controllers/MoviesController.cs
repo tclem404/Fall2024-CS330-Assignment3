@@ -83,6 +83,9 @@ namespace Fall2024_Assignment3_tbclements.Controllers
             {
                 avgSent = reviewsAbout.Average(r => r.ReviewSentiment);
             }
+
+            avgSent = ((int)(avgSent * 10000)) / 10000.0;
+
             MovieDetailViewModel vm = new MovieDetailViewModel()
             {
                 Actors = actorsStaring,
@@ -113,61 +116,69 @@ namespace Fall2024_Assignment3_tbclements.Controllers
         private async Task generateReviews(Movie movie)
         {
 
-            bool smallEnough = true;
-            do
+            var connectionstring = _configuration.GetConnectionString("DefaultConnection");
+
+            var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
+            optionsBuilder.UseSqlServer(connectionstring);
+
+            using (ApplicationDbContext dbContext = new ApplicationDbContext(optionsBuilder.Options))
             {
-                ApiKeyCredential ApiCredential = new(_configuration.GetValue(typeof(string), "OpenAIKey") as string);
-
-                string AiDeployment = "gpt-35-turbo";
-                ChatClient client = new AzureOpenAIClient(new Uri(_configuration.GetValue(typeof(string), "OpenAIEndpoint") as string), ApiCredential).GetChatClient(AiDeployment);
-
-                var messages = new ChatMessage[]
+                bool smallEnough = true;
+                do
                 {
+                    ApiKeyCredential ApiCredential = new(_configuration.GetValue(typeof(string), "OpenAIKey") as string);
+
+                    string AiDeployment = "gpt-35-turbo";
+                    ChatClient client = new AzureOpenAIClient(new Uri(_configuration.GetValue(typeof(string), "OpenAIEndpoint") as string), ApiCredential).GetChatClient(AiDeployment);
+
+                    var messages = new ChatMessage[]
+                    {
                 new SystemChatMessage($"You represent the Film Critics Association. Generate an answer with a valid JSON formatted array of objects containing the reviewer, publication, and quote. The response should start with [."),
                 new UserChatMessage($"Generate 10 reviews from a variety of reviewers about the movie {movie.Title}.")
-                };
-                ClientResult<ChatCompletion> result = await client.CompleteChatAsync(messages);
+                    };
+                    ClientResult<ChatCompletion> result = await client.CompleteChatAsync(messages);
 
-                string responseStr = result.Value.Content.FirstOrDefault()?.Text;
+                    string responseStr = result.Value.Content.FirstOrDefault()?.Text;
 
-                string tweetsJsonString = responseStr.Substring(responseStr.IndexOf('['), responseStr.LastIndexOf(']') + 1 - responseStr.IndexOf('[')) ?? "[]";
-                Console.WriteLine(tweetsJsonString);
+                    string tweetsJsonString = responseStr.Substring(responseStr.IndexOf('['), responseStr.LastIndexOf(']') + 1 - responseStr.IndexOf('[')) ?? "[]";
+                    Console.WriteLine(tweetsJsonString);
 
-                JsonArray json = null;
-                try
-                {
-                    json = JsonNode.Parse(tweetsJsonString)!.AsArray();
-                }
-                catch
-                {
-                    continue;
-                }
-
-                var analyzer = new SentimentIntensityAnalyzer();
-
-                var reviews = json.Select(t => new { Quote = t!["quote"]?.ToString() ?? "", Publication = t!["publication"]?.ToString() ?? "" , Reviewer = t!["reviewer"]?.ToString() ?? "" }).ToArray();
-                smallEnough = reviews.Length < 10;
-
-                if (!smallEnough)
-                {
-                    foreach (var review in reviews)
+                    JsonArray json = null;
+                    try
                     {
-                        SentimentAnalysisResults sentiment = analyzer.PolarityScores(review.Quote);
-
-                        Review t = new Review()
-                        {
-                            MovieId = movie.Id,
-                            ReviewText = review.Quote,
-                            Reviewer = review.Reviewer,
-                            Publication = review.Publication,
-                            ReviewSentiment = sentiment.Compound
-                        };
-
-                        _context.Add(t);
-                        _context.SaveChanges();
+                        json = JsonNode.Parse(tweetsJsonString)!.AsArray();
                     }
-                }
-            } while (smallEnough);
+                    catch
+                    {
+                        continue;
+                    }
+
+                    var analyzer = new SentimentIntensityAnalyzer();
+
+                    var reviews = json.Select(t => new { Quote = t!["quote"]?.ToString() ?? "", Publication = t!["publication"]?.ToString() ?? "", Reviewer = t!["reviewer"]?.ToString() ?? "" }).ToArray();
+                    smallEnough = reviews.Length < 10;
+
+                    if (!smallEnough)
+                    {
+                        foreach (var review in reviews)
+                        {
+                            SentimentAnalysisResults sentiment = analyzer.PolarityScores(review.Quote);
+
+                            Review t = new Review()
+                            {
+                                MovieId = movie.Id,
+                                ReviewText = review.Quote,
+                                Reviewer = review.Reviewer,
+                                Publication = review.Publication,
+                                ReviewSentiment = sentiment.Compound
+                            };
+
+                            dbContext.Add(t);
+                            dbContext.SaveChanges();
+                        }
+                    }
+                } while (smallEnough);
+            }
         }
 
         // POST: Movies/Create

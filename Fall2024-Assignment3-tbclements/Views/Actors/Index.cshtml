@@ -7,11 +7,12 @@
 <h1>Index</h1>
 
 <p>
-    <a asp-action="Create">Create New</a>
+    <a asp-action="Create">Add Actor</a>
 </p>
-<table class="table">
+<table class="indDT">
     <thead>
         <tr>
+            <th></th>
             <th>
                 @Html.DisplayNameFor(model => model.Name)
             </th>
@@ -21,27 +22,34 @@
             <th>
                 @Html.DisplayNameFor(model => model.Age)
             </th>
-            <th>
-                @Html.DisplayNameFor(model => model.IMDBLink)
-            </th>
+            
             <th></th>
         </tr>
     </thead>
     <tbody>
 @foreach (var item in Model) {
         <tr>
+                <td>
+                    @if (item.Poster != null)
+                    {
+
+                        // alternative way
+
+                        <img class="pfp" src="@Url.Action("GetActorPhoto", "Actors", new {item.Id})" />
+                    }
+                </td>
+
             <td>
                 @Html.DisplayFor(modelItem => item.Name)
             </td>
+                
             <td>
                 @Html.DisplayFor(modelItem => item.Gender)
             </td>
             <td>
                 @Html.DisplayFor(modelItem => item.Age)
             </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.IMDBLink)
-            </td>
+            
             <td>
                 <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
                 <a asp-action="Details" asp-route-id="@item.Id">Details</a> |

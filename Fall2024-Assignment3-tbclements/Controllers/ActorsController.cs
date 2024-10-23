@@ -81,6 +81,8 @@ namespace Fall2024_Assignment3_tbclements.Controllers
                 averageSent = tweetsAbout.Average(t => t.TweetSentiment);
             }
 
+            averageSent = ((int) (averageSent * 10000)) / 10000.0;
+
             var vm = new ActorDetailViewModel()
             {
                 Actor = actor,
@@ -109,60 +111,71 @@ namespace Fall2024_Assignment3_tbclements.Controllers
             return View(vm);
         }
 
-        private async Task generateTweets(Actor actor) {
+        private async Task generateTweets(Actor actor)
+        {
 
-            bool smallEnough = true;
-            do
+            var connectionstring = _configuration.GetConnectionString("DefaultConnection");
+
+            var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
+            optionsBuilder.UseSqlServer(connectionstring);
+
+            using (ApplicationDbContext dbContext = new ApplicationDbContext(optionsBuilder.Options))
             {
-                ApiKeyCredential ApiCredential = new(_configuration.GetValue(typeof(string), "OpenAIKey") as string);
-
-                string AiDeployment = "gpt-35-turbo";
-                ChatClient client = new AzureOpenAIClient(new Uri(_configuration.GetValue(typeof(string), "OpenAIEndpoint") as string), ApiCredential).GetChatClient(AiDeployment);
-
-                var messages = new ChatMessage[]
+                bool smallEnough = true;
+                do
                 {
+                    ApiKeyCredential ApiCredential = new(_configuration.GetValue(typeof(string), "OpenAIKey") as string);
+
+                    string AiDeployment = "gpt-35-turbo";
+                    ChatClient client = new AzureOpenAIClient(new Uri(_configuration.GetValue(typeof(string), "OpenAIEndpoint") as string), ApiCredential).GetChatClient(AiDeployment);
+
+                    var messages = new ChatMessage[]
+                    {
                 new SystemChatMessage($"You represent the Twitter social media platform. Generate an answer with a valid JSON formatted array of objects containing the tweet and username. The response should start with [."),
                 new UserChatMessage($"Generate 20 tweets from a variety of users about the actor {actor.Name}.")
-                };
-                ClientResult<ChatCompletion> result = await client.CompleteChatAsync(messages);
+                    };
+                    ClientResult<ChatCompletion> result = await client.CompleteChatAsync(messages);
 
-                string responseStr = result.Value.Content.FirstOrDefault()?.Text;
+                    string responseStr = result.Value.Content.FirstOrDefault()?.Text;
 
-                string tweetsJsonString = responseStr.Substring(responseStr.IndexOf('['), responseStr.LastIndexOf(']') + 1 - responseStr.IndexOf('[')) ?? "[]";
-                Console.WriteLine(tweetsJsonString);
+                    string tweetsJsonString = responseStr.Substring(responseStr.IndexOf('['), responseStr.LastIndexOf(']') + 1 - responseStr.IndexOf('[')) ?? "[]";
+                    Console.WriteLine(tweetsJsonString);
 
-                JsonArray json = null;
-                try
-                {
-                    json = JsonNode.Parse(tweetsJsonString)!.AsArray();
-                }
-                catch {
-                    continue;
-                }
-
-                var analyzer = new SentimentIntensityAnalyzer();
-
-                var tweets = json.Select(t => new { Username = t!["username"]?.ToString() ?? "", Text = t!["tweet"]?.ToString() ?? "" }).ToArray();
-                smallEnough = tweets.Length < 20;
-
-                if(!smallEnough)
-                {
-                    foreach (var tweet in tweets)
+                    JsonArray json = null;
+                    try
                     {
-                        SentimentAnalysisResults sentiment = analyzer.PolarityScores(tweet.Text);
-
-                        Tweet t = new Tweet() {
-                            ActorId = actor.Id,
-                            Username = tweet.Username,
-                            TweetText = tweet.Text,
-                            TweetSentiment = sentiment.Compound
-                        };
-
-                        _context.Add(t);
-                        _context.SaveChanges();
+                        json = JsonNode.Parse(tweetsJsonString)!.AsArray();
                     }
-                }
-            } while (smallEnough);
+                    catch
+                    {
+                        continue;
+                    }
+
+                    var analyzer = new SentimentIntensityAnalyzer();
+
+                    var tweets = json.Select(t => new { Username = t!["username"]?.ToString() ?? "", Text = t!["tweet"]?.ToString() ?? "" }).ToArray();
+                    smallEnough = tweets.Length < 20;
+
+                    if (!smallEnough)
+                    {
+                        foreach (var tweet in tweets)
+                        {
+                            SentimentAnalysisResults sentiment = analyzer.PolarityScores(tweet.Text);
+
+                            Tweet t = new Tweet()
+                            {
+                                ActorId = actor.Id,
+                                Username = tweet.Username,
+                                TweetText = tweet.Text,
+                                TweetSentiment = sentiment.Compound
+                            };
+
+                            dbContext.Add(t);
+                            dbContext.SaveChanges();
+                        }
+                    }
+                } while (smallEnough);
+            }
         }
 
 

@@ -1,5 +1,17 @@
+.navbar-brand{
+    color: white;
+}
+
+.navbar-brand :hover {
+    color: white;
+}
+
+.disabled.disabled:active {
+    color: white;
+}
+
 html {
-  font-size: 14px;
+    font-size: 14px;
 }
 
 @media (min-width: 768px) {
@@ -18,5 +30,64 @@ html {
 }
 
 body {
-  margin-bottom: 60px;
+    margin-bottom: 60px;
+}
+
+.flex {
+    display:flex;
+    justify-content:center;
+    align-items: stretch;
+    flex-direction: row;
+    gap: 20px;
+}
+
+.photoInfo {
+    width = 25vw;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    padding-bottom: 5vh;
+}
+
+    .photoInfo > img {
+        height: 50vh;
+        margin-right:20px;
+        border-radius: 5vh;
+        border-collapse: separate;
+    }
+
+.deets{
+    width: 5vw;
+}
+
+.deets > * {
+    font-size: medium;
+}
+
+.flex > .movs {
+    width: 25vw;
+}
+
+.flex > .tweets {
+    width: 50vw;
+}
+
+.pfp {
+    border-radius:40%;
+    width: 50px;
+    height: 50px;
+    background-position: center center;
+    background-repeat: no-repeat;
+}
+
+.select2{
+    color: black;
+}
+
+.select2-results {
+    color: black !important;
+}
+
+.form-group > .btn{
+    margin-top:20px;
 }
