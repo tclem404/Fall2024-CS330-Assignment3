@@ -8,6 +8,10 @@
 
 <h4>Actor</h4>
 <hr />
+
+<input type="hidden" id="selectedmemebers" value="@Model.Multi.SelectedMovies" />
+
+
 <div class="row">
     <div class="col-md-4">
         <form asp-action="Edit" enctype="multipart/form-data">
@@ -34,21 +38,19 @@
                 <span asp-validation-for="Actor.IMDBLink" class="text-danger"></span>
             </div>
             <div class="form-photo">
-                <label asp-for="Poster" class="control-label">Picture</label>
+                <label asp-for="Poster" class="control-label">Change Picture</label>
                 <input asp-for="Poster" type="file" class="form-control" />
-                <span asp-validation-for="Poster" class="text-danger"></span>
             </div>
 
             <div class="form-group">
                 <label asp-for="Multi.Members" class="control-label"></label>
-                <input asp-for="Multi.Members" type="hidden" id="selectedmemebers" value="@Model.Multi.SelectedMovies" />
                 @Html.DropDownListFor(x => x.Multi.Members, Model.Multi.MovieList, new
                     {
                         @id = "Members",
                         @class = "select2 form-select",
-                        multiple =
-                         "multiple",
-                        tabindex = "3"
+                        multiple = "multiple",
+                        tabindex = "3",
+                        @value = "@Model.Multi.SelectedMovies"
                     })
                 <span asp-validation-for="Multi.Members" class="text-danger"></span>
             </div>

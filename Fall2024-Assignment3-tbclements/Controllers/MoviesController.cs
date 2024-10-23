@@ -196,7 +196,10 @@ namespace Fall2024_Assignment3_tbclements.Controllers
             }
 
             // Just override, don't worry
-            ModelState.GetValueOrDefault("Multi.Members").ValidationState = ModelValidationState.Valid;
+            if(ModelState.ContainsKey("Multi.Members"))
+            {
+                ModelState.GetValueOrDefault("Multi.Members").ValidationState = ModelValidationState.Valid;
+            }
 
             if (ModelState.IsValid)
             {
@@ -263,7 +266,8 @@ namespace Fall2024_Assignment3_tbclements.Controllers
                 Multi = new MultiActorSelection()
                 {
                     ActorList = new SelectList(_context.Actor, "Id", "Name"),
-                    Members = listActors.ToArray()
+                    Members = listActors.ToArray(),
+                    SelectedActors = string.Join(',', listActors),
                 }
             };
 
@@ -275,7 +279,7 @@ namespace Fall2024_Assignment3_tbclements.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,IMDBLink,Genre,YearOfRelease")] Movie movie, IFormFile Poster, [Bind("Members")] MultiActorSelection Multi)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,IMDBLink,Genre,YearOfRelease")] Movie movie, IFormFile? Poster, [Bind("Members")] MultiActorSelection Multi)
         {
             if (id != movie.Id)
             {
@@ -283,7 +287,10 @@ namespace Fall2024_Assignment3_tbclements.Controllers
             }
 
             // Just override, don't worry
-            ModelState.GetValueOrDefault("Multi.Members").ValidationState = ModelValidationState.Valid;
+            if (ModelState.ContainsKey("Multi.Members"))
+            {
+                ModelState.GetValueOrDefault("Multi.Members").ValidationState = ModelValidationState.Valid;
+            }
 
             if (ModelState.IsValid)
             {
@@ -295,22 +302,33 @@ namespace Fall2024_Assignment3_tbclements.Controllers
                         Poster.CopyTo(stream);
                         movie.Poster = stream.ToArray();
                     }
+                    else
+                    {
+                        movie.Poster = await _context.Movie.Where(m => m.Id == movie.Id).Select(m => m.Poster).FirstOrDefaultAsync();
+                    }
 
                     var allMovieActorPairs = await _context.MovieActor.Where(ma => ma.MovieId == movie.Id).ToListAsync();
                     _context.MovieActor.RemoveRange(allMovieActorPairs);
                     await _context.SaveChangesAsync();
 
-                    foreach (int item in Multi.Members)
+                    if((Multi is not null) && (Multi.Members is not null))
                     {
-                        MovieActor ma = new MovieActor()
+                        foreach (int item in Multi.Members)
                         {
-                            MovieId = movie.Id,
-                            ActorId = item
-                        };
+                            MovieActor ma = new MovieActor()
+                            {
+                                MovieId = movie.Id,
+                                ActorId = item
+                            };
 
-                        _context.Add(ma);
+                            if (!(await _context.MovieActor.AnyAsync(i => i.MovieId == movie.Id && i.ActorId == item)))
+                            {
+                                // should never be here but allas
+                                _context.Add(ma);
+                                await _context.SaveChangesAsync();
+                            }
+                        }
                     }
-                    await _context.SaveChangesAsync();
 
 
                     _context.Update(movie);

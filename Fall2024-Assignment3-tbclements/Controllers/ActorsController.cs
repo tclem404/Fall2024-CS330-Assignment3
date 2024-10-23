@@ -13,6 +13,7 @@ using System.ClientModel;
 using Azure.AI.OpenAI;
 using System.Text.Json.Nodes;
 using VaderSharp2;
+using System.Diagnostics;
 
 namespace Fall2024_Assignment3_tbclements.Controllers
 {
@@ -194,7 +195,10 @@ namespace Fall2024_Assignment3_tbclements.Controllers
             }
 
             // Just override, don't worry
-            ModelState.GetValueOrDefault("Multi.Members").ValidationState = ModelValidationState.Valid;
+            if (ModelState.ContainsKey("Multi.Members"))
+            {
+                ModelState.GetValueOrDefault("Multi.Members").ValidationState = ModelValidationState.Valid;
+            }
 
             if (ModelState.IsValid)
             {
@@ -262,7 +266,8 @@ namespace Fall2024_Assignment3_tbclements.Controllers
                 Multi = new MultiMovieSelection()
                 {
                     MovieList = new SelectList(_context.Movie, "Id", "Title"),
-                    Members = listMovies.ToArray()
+                    Members = listMovies.ToArray(),
+                    SelectedMovies = string.Join(',', listMovies)
                 }
             };
 
@@ -274,15 +279,19 @@ namespace Fall2024_Assignment3_tbclements.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Gender,Age,IMDBLink")] Actor actor, IFormFile Poster, [Bind("Members")] MultiActorSelection Multi)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Gender,Age,IMDBLink")] Actor actor, IFormFile? Poster, [Bind("Members")] MultiActorSelection Multi)
         {
+
             if (id != actor.Id)
             {
                 return NotFound();
             }
 
             // Just override, don't worry
-            ModelState.GetValueOrDefault("Multi.Members").ValidationState = ModelValidationState.Valid;
+            if (ModelState.ContainsKey("Multi.Members"))
+            {
+                ModelState.GetValueOrDefault("Multi.Members").ValidationState = ModelValidationState.Valid;
+            }
 
             if (ModelState.IsValid)
             {
@@ -294,22 +303,34 @@ namespace Fall2024_Assignment3_tbclements.Controllers
                         Poster.CopyTo(stream);
                         actor.Poster = stream.ToArray();
                     }
+                    else
+                    {
+                        actor.Poster = await _context.Actor.Where(a => a.Id == actor.Id).Select(a => a.Poster).FirstOrDefaultAsync();
+                    }
 
                     var allMovieActorPairs = await _context.MovieActor.Where(ma => ma.ActorId == actor.Id).ToListAsync();
                     _context.MovieActor.RemoveRange(allMovieActorPairs);
                     await _context.SaveChangesAsync();
 
-                    foreach (int item in Multi.Members)
+                    if((Multi is not null) && (Multi.Members is not null))
                     {
-                        MovieActor ma = new MovieActor()
+                        foreach (int item in Multi.Members)
                         {
-                            ActorId = actor.Id,
-                            MovieId = item
-                        };
+                            MovieActor ma = new MovieActor()
+                            {
+                                ActorId = actor.Id,
+                                MovieId = item
+                            };
+                            if (!(await _context.MovieActor.AnyAsync(i => i.ActorId == actor.Id && i.MovieId == item)))
+                            {
+                                // should never be here but allas
+                                _context.Add(ma);
+                                await _context.SaveChangesAsync();
+                            }
 
-                        _context.Add(ma);
+                        }
                     }
-                    await _context.SaveChangesAsync();
+                    
 
                     _context.Update(actor);
                     await _context.SaveChangesAsync();

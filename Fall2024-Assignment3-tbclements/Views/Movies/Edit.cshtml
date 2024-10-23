@@ -8,6 +8,10 @@
 
 <h4>Movie</h4>
 <hr />
+
+<input type="hidden" id="selectedmemebers" value="@Model.Multi.SelectedActors" />
+
+
 <div class="row">
     <div class="col-md-4">
         <form asp-action="Edit" enctype="multipart/form-data">
@@ -41,7 +45,6 @@
 
             <div class="form-group">
                 <label asp-for="Multi.Members" class="control-label"></label>
-                <input asp-for="Multi.Members" type="hidden" id="selectedmemebers" value="@Model.Multi.SelectedActors" />
                 @Html.DropDownListFor(x => x.Multi.Members, Model.Multi.ActorList, new
                     {
                         @id = "Members",
