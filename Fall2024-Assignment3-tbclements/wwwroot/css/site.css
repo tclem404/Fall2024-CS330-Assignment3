@@ -91,3 +91,7 @@ body {
 .form-group > .btn{
     margin-top:20px;
 }
+
+.homePara > *{
+    display:inline;
+}

@@ -114,7 +114,7 @@ namespace Fall2024_Assignment3_tbclements.Controllers
         private async Task generateTweets(Actor actor)
         {
 
-            var connectionstring = _configuration.GetConnectionString("DefaultConnection");
+            var connectionstring = _configuration.GetConnectionString("SecretConnection");
 
             var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
             optionsBuilder.UseSqlServer(connectionstring);
